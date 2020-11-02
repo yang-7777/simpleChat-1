@@ -26,6 +26,7 @@ public class ChatClient extends AbstractClient
    * the display method in the client.
    */
   ChatIF clientUI; 
+  int id;
 
   
   //Constructors ****************************************************
@@ -43,7 +44,9 @@ public class ChatClient extends AbstractClient
   {
     super(host, port); //Call the superclass constructor
     this.clientUI = clientUI;
+    this.id=id;
     openConnection();
+    sendToServer("#login" + id);
   }
 
   
@@ -66,8 +69,10 @@ public class ChatClient extends AbstractClient
    */
   public void handleMessageFromClientUI(String message)
   {
-    try
-    {
+    if(message.startsWith("#")){
+      this.handleCommand(message);}
+      else{
+        try{
       sendToServer(message);
     }
     catch(IOException e)
@@ -77,7 +82,80 @@ public class ChatClient extends AbstractClient
       quit();
     }
   }
+  }
   
+  private void handleCommand(String message) {
+    String[] tab = message.split(" ");
+    switch(tab[0]) {
+    case("#quit"):
+      if(this.isConnected()) {
+        try {
+          sendToServer("#logoff");
+          this.quit();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    break;
+    case("#logoff"):
+      if(this.isConnected()) {
+        try {
+          sendToServer("#logoff");
+          this.closeConnection();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+    break;
+    case("#sethost"):
+      if(!this.isConnected()) {
+        if(tab.length > 1) {
+          String host = tab[1];
+          this.setHost(host);
+          System.out.println("New host is " + this.getHost());
+        }
+        else {
+          System.out.println("Missing host argument !");
+        }
+      }
+    break;
+    case("#setport"):
+      if(!this.isConnected()) {
+        if(tab.length > 1) {
+          int port = Integer.parseInt(tab[1]);
+          this.setPort(port);
+          System.out.println("New port is " + this.getPort());
+        }
+        else {
+          System.out.println("Missing port argument !");
+        }
+      }
+    break;
+    case("#login"):
+      if(!this.isConnected()) {
+        try {
+          this.openConnection();
+          System.out.println("Logged in to server !");
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+      else {
+        System.out.println("You are already logged in !");
+      }
+    break;
+    case("#gethost"):
+      System.out.println(this.getHost());
+    break;
+    case("#getport"):
+      System.out.println(this.getPort());
+    break;
+    default:
+      System.out.println("Invalid command !");
+      break;
+    }
+  }
+
   /**
    * This method terminates the client.
    */
@@ -90,5 +168,17 @@ public class ChatClient extends AbstractClient
     catch(IOException e) {}
     System.exit(0);
   }
+  //@Override
+  protected void connectionClosed() {
+    clientUI.display("The connection has been successfully closed.");
+  }
+
+  //@Override
+  protected void connectionException(Exception exception) {
+    exception.printStackTrace();
+    clientUI.display("Connection to server lost.");
+    quit();
+  }
+}
 }
 //End of ChatClient class
